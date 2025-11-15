@@ -1,5 +1,11 @@
-44d88612fea8a8f36de82e1278abb02f
-8.8.8.8
-185.220.101.141
-d41d8cd98f00b204e9800998ecf8427e
-1.1.1.1
+# File Hashes
+44d88612fea8a8f36de82e1278abb02f  # EICAR Test
+d41d8cd98f00b204e9800998ecf8427e  # Empty File
+275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f  # Malware SHA256
+
+# IP Addresses
+8.8.8.8          # Google DNS
+185.220.101.141  # Suspicious IP
+1.1.1.1          # Cloudflare DNS
+
+# Comments start with #

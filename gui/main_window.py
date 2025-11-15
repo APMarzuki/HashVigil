@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QLineEdit, QPushButton, QTabWidget, QTextEdit,
-                             QLabel, QFileDialog, QMessageBox, QProgressBar)
+                             QLabel, QFileDialog, QMessageBox, QProgressBar,
+                             QDialog, QMenuBar, QMenu, QAction)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QFont, QPalette, QColor
 import json
@@ -10,6 +11,8 @@ from core.api_virustotal import VirusTotalAPI
 from core.api_otx import OTXAPI
 from core.api_abuseipdb import AbuseIPDBAPI
 from core.aggregator import ThreatIntelligenceAggregator
+from gui.settings_window import SettingsWindow
+from core.config_manager import ConfigManager
 
 
 class AnalysisThread(QThread):
@@ -74,14 +77,146 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.analysis_thread = None
-        self.last_results = {}  # Store last results for export
+        self.last_results = {}
+        self.config = ConfigManager()  # Add config manager
         self.init_ui()
+        self.apply_theme()  # Apply theme on startup
 
     def init_ui(self):
         self.setWindowTitle("HashVigil - Threat Intelligence Analyzer")
         self.setGeometry(100, 100, 1000, 800)
 
-        # Set application style
+        # Create menu bar first
+        self.create_menu_bar()
+
+        # Apply initial theme
+        self.apply_theme()
+
+        # Central widget
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        layout = QVBoxLayout(central_widget)
+        layout.setSpacing(10)
+        layout.setContentsMargins(15, 15, 15, 15)
+
+        # Title
+        title_label = QLabel("🔍 HashVigil - Threat Intelligence Analyzer")
+        title_font = QFont()
+        title_font.setPointSize(16)
+        title_font.setBold(True)
+        title_label.setFont(title_font)
+        title_label.setAlignment(Qt.AlignCenter)
+        title_label.setStyleSheet("color: #0078d4; padding: 10px;")
+
+        # Input section
+        input_layout = QHBoxLayout()
+        input_layout.setSpacing(10)
+
+        self.input_field = QLineEdit()
+        self.input_field.setPlaceholderText("Enter file hash (MD5, SHA256) or IP address...")
+        self.input_field.returnPressed.connect(self.analyze)
+
+        self.analyze_btn = QPushButton("🔍 Analyze")
+        self.analyze_btn.setObjectName("analyze_btn")
+        self.analyze_btn.clicked.connect(self.analyze)
+
+        self.bulk_btn = QPushButton("📁 Bulk Import")
+        self.bulk_btn.clicked.connect(self.bulk_import)
+
+        self.clear_btn = QPushButton("🗑️ Clear")
+        self.clear_btn.setObjectName("clear_btn")
+        self.clear_btn.clicked.connect(self.clear_results)
+
+        self.export_btn = QPushButton("💾 Export Results")
+        self.export_btn.setObjectName("export_btn")
+        self.export_btn.clicked.connect(self.export_results)
+
+        input_layout.addWidget(QLabel("Input:"))
+        input_layout.addWidget(self.input_field, 1)  # Stretch factor 1
+        input_layout.addWidget(self.analyze_btn)
+        input_layout.addWidget(self.bulk_btn)
+        input_layout.addWidget(self.clear_btn)
+        input_layout.addWidget(self.export_btn)
+
+        # Progress bar
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setFixedHeight(20)
+
+        # Results area
+        results_label = QLabel("Analysis Results:")
+        results_label.setStyleSheet("font-weight: bold; font-size: 12px; color: #e1a34e;")
+
+        self.results_display = QTextEdit()
+        self.results_display.setReadOnly(True)
+
+        # Add to main layout
+        layout.addWidget(title_label)
+        layout.addLayout(input_layout)
+        layout.addWidget(self.progress_bar)
+        layout.addWidget(results_label)
+        layout.addWidget(self.results_display, 1)  # Stretch factor 1
+
+    def create_menu_bar(self):
+        """Create application menu bar"""
+        menubar = self.menuBar()
+
+        # File menu
+        file_menu = menubar.addMenu('📁 File')
+
+        settings_action = QAction('⚙️ Settings', self)
+        settings_action.triggered.connect(self.open_settings)
+        file_menu.addAction(settings_action)
+
+        file_menu.addSeparator()
+
+        exit_action = QAction('🚪 Exit', self)
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+
+        # View menu
+        view_menu = menubar.addMenu('👀 View')
+
+        self.theme_menu = view_menu.addMenu('🎨 Theme')
+
+        dark_action = QAction('Dark', self)
+        dark_action.triggered.connect(lambda: self.change_theme('dark'))
+        self.theme_menu.addAction(dark_action)
+
+        light_action = QAction('Light', self)
+        light_action.triggered.connect(lambda: self.change_theme('light'))
+        self.theme_menu.addAction(light_action)
+
+        # Help menu
+        help_menu = menubar.addMenu('❓ Help')
+
+        about_action = QAction('ℹ️ About', self)
+        about_action.triggered.connect(self.show_about)
+        help_menu.addAction(about_action)
+
+    def open_settings(self):
+        """Open settings dialog"""
+        settings_dialog = SettingsWindow(self)
+        if settings_dialog.exec_() == QDialog.Accepted:
+            # Reload theme if settings were saved
+            self.apply_theme()
+
+    def change_theme(self, theme_name):
+        """Change application theme"""
+        self.config.set_setting('SETTINGS', 'theme', theme_name)
+        self.apply_theme()
+
+    def apply_theme(self):
+        """Apply current theme from settings"""
+        theme = self.config.get_setting('SETTINGS', 'theme', 'dark')
+
+        if theme == 'light':
+            self.apply_light_theme()
+        else:
+            self.apply_dark_theme()
+
+    def apply_dark_theme(self):
+        """Apply dark theme stylesheet"""
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #2b2b2b;
@@ -164,72 +299,159 @@ class MainWindow(QMainWindow):
                 background-color: #0078d4;
                 border-radius: 4px;
             }
+            QMenuBar {
+                background-color: #2b2b2b;
+                color: #ffffff;
+                border-bottom: 1px solid #555555;
+            }
+            QMenuBar::item {
+                background-color: transparent;
+                padding: 5px 10px;
+            }
+            QMenuBar::item:selected {
+                background-color: #0078d4;
+                color: white;
+            }
+            QMenu {
+                background-color: #2b2b2b;
+                color: #ffffff;
+                border: 1px solid #555555;
+            }
+            QMenu::item {
+                padding: 5px 20px;
+            }
+            QMenu::item:selected {
+                background-color: #0078d4;
+                color: white;
+            }
         """)
 
-        # Central widget
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        layout = QVBoxLayout(central_widget)
-        layout.setSpacing(10)
-        layout.setContentsMargins(15, 15, 15, 15)
+    def apply_light_theme(self):
+        """Apply light theme stylesheet"""
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color: #f0f0f0;
+                color: #333333;
+            }
+            QWidget {
+                background-color: #f0f0f0;
+                color: #333333;
+            }
+            QLineEdit {
+                background-color: #ffffff;
+                color: #333333;
+                border: 2px solid #cccccc;
+                border-radius: 5px;
+                padding: 8px;
+                font-size: 12px;
+            }
+            QLineEdit:focus {
+                border-color: #0078d4;
+            }
+            QPushButton {
+                background-color: #0078d4;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 8px 15px;
+                font-weight: bold;
+                font-size: 11px;
+                min-width: 80px;
+            }
+            QPushButton:hover {
+                background-color: #106ebe;
+            }
+            QPushButton:pressed {
+                background-color: #005a9e;
+            }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #888888;
+            }
+            QPushButton#analyze_btn {
+                background-color: #107c10;
+            }
+            QPushButton#analyze_btn:hover {
+                background-color: #0e6b0e;
+            }
+            QPushButton#export_btn {
+                background-color: #e1a34e;
+            }
+            QPushButton#export_btn:hover {
+                background-color: #d1933e;
+            }
+            QPushButton#clear_btn {
+                background-color: #d13438;
+            }
+            QPushButton#clear_btn:hover {
+                background-color: #c12a2e;
+            }
+            QTextEdit {
+                background-color: #ffffff;
+                color: #333333;
+                border: 1px solid #cccccc;
+                border-radius: 5px;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 11px;
+                padding: 10px;
+            }
+            QLabel {
+                color: #333333;
+                font-weight: bold;
+            }
+            QProgressBar {
+                border: 1px solid #cccccc;
+                border-radius: 5px;
+                text-align: center;
+                color: #333333;
+                font-weight: bold;
+                background-color: #ffffff;
+            }
+            QProgressBar::chunk {
+                background-color: #0078d4;
+                border-radius: 4px;
+            }
+            QMenuBar {
+                background-color: #f0f0f0;
+                color: #333333;
+                border-bottom: 1px solid #cccccc;
+            }
+            QMenuBar::item {
+                background-color: transparent;
+                padding: 5px 10px;
+            }
+            QMenuBar::item:selected {
+                background-color: #0078d4;
+                color: white;
+            }
+            QMenu {
+                background-color: #ffffff;
+                color: #333333;
+                border: 1px solid #cccccc;
+            }
+            QMenu::item {
+                padding: 5px 20px;
+            }
+            QMenu::item:selected {
+                background-color: #0078d4;
+                color: white;
+            }
+        """)
 
-        # Title
-        title_label = QLabel("🔍 HashVigil - Threat Intelligence Analyzer")
-        title_font = QFont()
-        title_font.setPointSize(16)
-        title_font.setBold(True)
-        title_label.setFont(title_font)
-        title_label.setAlignment(Qt.AlignCenter)
-        title_label.setStyleSheet("color: #0078d4; padding: 10px;")
-
-        # Input section
-        input_layout = QHBoxLayout()
-        input_layout.setSpacing(10)
-
-        self.input_field = QLineEdit()
-        self.input_field.setPlaceholderText("Enter file hash (MD5, SHA256) or IP address...")
-        self.input_field.returnPressed.connect(self.analyze)
-
-        self.analyze_btn = QPushButton("🔍 Analyze")
-        self.analyze_btn.setObjectName("analyze_btn")
-        self.analyze_btn.clicked.connect(self.analyze)
-
-        self.bulk_btn = QPushButton("📁 Bulk Import")
-        self.bulk_btn.clicked.connect(self.bulk_import)
-
-        self.clear_btn = QPushButton("🗑️ Clear")
-        self.clear_btn.setObjectName("clear_btn")
-        self.clear_btn.clicked.connect(self.clear_results)
-
-        self.export_btn = QPushButton("💾 Export Results")
-        self.export_btn.setObjectName("export_btn")
-        self.export_btn.clicked.connect(self.export_results)
-
-        input_layout.addWidget(QLabel("Input:"))
-        input_layout.addWidget(self.input_field, 1)  # Stretch factor 1
-        input_layout.addWidget(self.analyze_btn)
-        input_layout.addWidget(self.bulk_btn)
-        input_layout.addWidget(self.clear_btn)
-        input_layout.addWidget(self.export_btn)
-
-        # Progress bar
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        self.progress_bar.setFixedHeight(20)
-
-        # Results area
-        results_label = QLabel("Analysis Results:")
-        results_label.setStyleSheet("font-weight: bold; font-size: 12px; color: #e1a34e;")
-
-        self.results_display = QTextEdit()
-        self.results_display.setReadOnly(True)
-
-        # Add to main layout
-        layout.addWidget(title_label)
-        layout.addLayout(input_layout)
-        layout.addWidget(self.progress_bar)
-        layout.addWidget(results_label)
-        layout.addWidget(self.results_display, 1)  # Stretch factor 1
+    def show_about(self):
+        """Show about dialog"""
+        QMessageBox.about(self, "About HashVigil",
+                          "<h2>HashVigil v2.0</h2>"
+                          "<p>Advanced Threat Intelligence Analyzer</p>"
+                          "<p>Features:</p>"
+                          "<ul>"
+                          "<li>Multi-source threat intelligence</li>"
+                          "<li>VirusTotal, OTX, AbuseIPDB integration</li>"
+                          "<li>Dark/Light theme support</li>"
+                          "<li>Bulk analysis capabilities</li>"
+                          "<li>Export functionality</li>"
+                          "</ul>"
+                          "<p>Built with Python and PyQt5</p>")
 
     def analyze(self):
         input_text = self.input_field.text().strip()
@@ -606,14 +828,33 @@ class MainWindow(QMainWindow):
         if file_path:
             try:
                 with open(file_path, 'r') as file:
-                    iocs = [line.strip() for line in file if line.strip()]
+                    iocs = [line.strip() for line in file if line.strip() and not line.startswith('#')]
 
                 if iocs:
-                    self.results_display.setText(f"📁 Loaded {len(iocs)} IOCs from: {file_path}\n\n"
-                                                 f"First few IOCs:\n" + "\n".join(iocs[:5]) +
-                                                 f"\n\n... and {len(iocs) - 5} more" if len(iocs) > 5 else "")
+                    self.bulk_iocs = iocs  # Store for analysis
+                    self.current_bulk_index = 0
+
+                    # Show preview and analysis options
+                    preview_text = f"📁 Loaded {len(iocs)} IOCs from: {file_path}\n\n"
+                    preview_text += "First 5 IOCs:\n" + "\n".join(iocs[:5])
+                    if len(iocs) > 5:
+                        preview_text += f"\n... and {len(iocs) - 5} more\n\n"
+
+                    preview_text += "\n🔍 Options:\n"
+                    preview_text += "• Copy & paste each IOC manually for analysis\n"
+                    preview_text += "• Or analyze sequentially (coming in v2.0!)"
+
+                    self.results_display.setText(preview_text)
+
+                    # Optional: Auto-analyze first IOC
+                    if iocs:
+                        self.input_field.setText(iocs[0])
+                        # Uncomment next line to auto-analyze first item:
+                        # self.analyze()
+
                 else:
-                    self.results_display.setText("❌ No valid IOCs found in the selected file.")
+                    self.results_display.setText(
+                        "❌ No valid IOCs found in the selected file.\n\nMake sure each IOC is on a separate line.")
 
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to read file: {str(e)}")

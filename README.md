@@ -1,10 +1,20 @@
-# HashVigil / IOC-Hunter 🔍
+# HashVigil / IOC-Hunter 
 
 A powerful desktop threat intelligence application for analyzing file hashes and IP addresses against multiple public threat intelligence APIs. Built for security analysts, SOC teams, and cybersecurity professionals.
 
-![HashVigil Screenshot](https://via.placeholder.com/800x400.png?text=HashVigil+Screenshot) *// You can add actual screenshots later*
+![HashVigil v2.0](https://img.shields.io/badge/Version-2.0.0-blue)
+![Python](https://img.shields.io/badge/Python-3.8%2B-green)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
-## ✨ Features
+##  What's New in v2.0!
+
+- ** Theme System** - Dark/Light mode switching with persistent preferences
+- ** Settings Management** - GUI configuration window for API keys and preferences
+- ** Professional Menu** - File, View, Help menus with enhanced navigation
+- ** Persistent Configuration** - Remembers your theme and settings between sessions
+- ** Enhanced Architecture** - Centralized config management and modular design
+
+##  Features
 
 - **Multi-Source Analysis**: Check file hashes (MD5, SHA256) against VirusTotal and AlienVault OTX
 - **IP Reputation**: Check IP addresses against AbuseIPDB for abuse reports and confidence scores
@@ -12,15 +22,15 @@ A powerful desktop threat intelligence application for analyzing file hashes and
 - **Bulk Analysis**: Import and analyze multiple IOCs from text files
 - **Export Results**: Save analysis results to JSON or CSV formats
 - **User-Friendly GUI**: Clean PyQt5 interface with real-time progress indicators
+- **Theme Support**: Switch between Dark and Light themes
 - **Standalone Executable**: No Python installation required - just download and run
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Option 1: Download Executable (Recommended for End Users)
-1. Download the latest `HashVigil.exe` from [Releases](../../releases)
-2. Create a `config` folder in the same directory as the executable
-3. Create `config/settings.ini` with your API keys (see Configuration section)
-4. Run `HashVigil.exe`
+1. Download the latest `HashVigil.exe` from [Releases](https://github.com/APMarzuki/HashVigil/releases)
+2. Run `HashVigil.exe`
+3. Configure API keys via `File → Settings` in the application
 
 ### Option 2: Run from Source (For Developers)
 ```bash
@@ -31,14 +41,23 @@ cd HashVigil
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure API keys
-cp config/settings_template.ini config/settings.ini
-# Edit config/settings.ini with your API keys
-
 # Run the application
 python main.py
-⚙️ Configuration
-API Keys Setup
+
+# Configure API keys via File → Settings in the app
+ Configuration
+API Keys Setup (v2.0 Method - Recommended)
+Open HashVigil
+
+Go to File → Settings
+
+Navigate to the "API Keys" tab
+
+Enter your API keys for each service
+
+Click "Save Settings"
+
+Manual Configuration (Legacy Method)
 Create config/settings.ini with your API keys:
 
 ini
@@ -53,8 +72,11 @@ otx = YOUR_OTX_API_KEY_HERE
 abuseipdb = YOUR_ABUSEIPDB_API_KEY_HERE
 
 [SETTINGS]
+theme = dark
 cache_duration = 3600
 max_concurrent_requests = 5
+auto_export = false
+risk_threshold = 70
 Required API Keys
 VirusTotal: Free tier available (500 requests/day)
 
@@ -62,7 +84,7 @@ AlienVault OTX: Completely free, unlimited requests
 
 AbuseIPDB: Free tier available (1,000 requests/day)
 
-🛠️ Building from Source
+ Building from Source
 Prerequisites
 Python 3.8+
 
@@ -75,15 +97,12 @@ pip install -r requirements.txt
 
 # Build executable
 python build.py
-# or manually:
-pyinstaller --onefile --windowed --name HashVigil --add-data "config;config" main.py
 
 # The executable will be in the 'dist' folder
-📊 Usage Examples
+ Usage Examples
 Analyzing File Hashes
 text
-44d88612fea8a8f36de82e1278abb02f  # EICAR test file (malicious)
-d41d8cd98f00b204e9800998ecf8427e  # Empty file (benign)
+44d886d98f00b204e9800998ecf8427e  # Empty file (benign)
 Analyzing IP Addresses
 text
 8.8.8.8           # Google DNS (clean)
@@ -95,33 +114,42 @@ Click "Bulk Import" and select your file
 
 Review results for all IOCs
 
-🎯 Supported IOCs
+Theme Customization
+Go to View → Theme
+
+Select "Dark" or "Light" theme
+
+Your preference is automatically saved
+
+ Supported IOCs
 Type	Format	Supported Services
 File Hashes	MD5, SHA1, SHA256	VirusTotal, AlienVault OTX
 IP Addresses	IPv4	AbuseIPDB
-📁 Project Structure
+Project Structure
 text
 HashVigil/
 ├── core/                 # API integration modules
 │   ├── api_virustotal.py
 │   ├── api_otx.py
 │   ├── api_abuseipdb.py
-│   └── aggregator.py
+│   ├── aggregator.py
+│   └── config_manager.py # v2.0: Centralized configuration
 ├── gui/                  # User interface
-│   └── main_window.py
+│   ├── main_window.py
+│   └── settings_window.py # v2.0: Settings dialog
 ├── config/               # Configuration files
 │   └── settings.ini
 ├── main.py              # Application entry point
 ├── build.py             # Build script
 ├── requirements.txt     # Python dependencies
 └── README.md           # This file
-🐛 Troubleshooting
+ Troubleshooting
 Common Issues
 "API key not configured" errors
 
-Ensure config/settings.ini exists with correct API keys
+Use the Settings window (File → Settings) to configure API keys
 
-Verify the config file is in the same directory as the executable
+Or ensure config/settings.ini exists with correct API keys
 
 "No results" or timeouts
 
@@ -137,7 +165,13 @@ Ensure all dependencies are installed
 
 Try running from source with python main.py for detailed error messages
 
-🤝 Contributing
+Theme not saving
+
+Ensure the application has write permissions in its directory
+
+Check if config/settings.ini is not read-only
+
+Contributing
 We welcome contributions! Please feel free to submit pull requests, report bugs, or suggest new features.
 
 Fork the repository
@@ -150,10 +184,9 @@ Push to the branch (git push origin feature/amazing-feature)
 
 Open a Pull Request
 
-📄 License
+ License
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-🙏 Acknowledgments
+ Acknowledgments
 VirusTotal for their comprehensive file analysis API
 
 AlienVault OTX for open threat intelligence
@@ -166,34 +199,24 @@ Note: This tool is for legitimate security research and analysis purposes only. 
 
 text
 
-## What Was Fixed:
+##  **Next Steps:**
 
-1. **Missing section headers** - Added proper `##` headers for Configuration, Building, etc.
-2. **Code block formatting** - Fixed the code blocks that were broken
-3. **Table formatting** - Fixed the Supported IOCs table
-4. **List formatting** - Fixed bullet points and numbered lists
-5. **Proper markdown syntax** throughout
+1. **Copy this updated README.md** to your project
+2. **Update the GitHub URL** if needed (replace `APMarzuki` with your actual username)
+3. **Create the release** following the steps I mentioned earlier
+4. **Take screenshots** of your v2.0 app (showing both dark and light themes, settings window)
 
-## Final Steps Before GitHub Upload:
+##  **Suggested Screenshots:**
+- Dark theme main window with analysis results
+- Light theme main window  
+- Settings window showing API keys tab
+- About dialog
 
-1. **Replace the GitHub URL**: Change `APMarzuki` to your actual GitHub username
-2. **Create settings_template.ini**: Create this file in your `config` folder
-3. **Take actual screenshots**: Replace the placeholder image with real screenshots of your app
-4. **Test the build process**: Make sure `python build.py` works correctly
+##  **Ready for GitHub Release!**
 
-## Create `config/settings_template.ini`:
+Your README is now updated with all v2.0 features. You're ready to:
 
-```ini
-[API_KEYS]
-; Get your free API keys from the following services:
-; VirusTotal: https://www.virustotal.com/gui/join-us
-; AlienVault OTX: https://otx.alienvault.com/api
-; AbuseIPDB: https://www.abuseipdb.com/account/api
-
-virustotal = YOUR_VIRUSTOTAL_API_KEY_HERE
-otx = YOUR_OTX_API_KEY_HERE
-abuseipdb = YOUR_ABUSEIPDB_API_KEY_HERE
-
-[SETTINGS]
-cache_duration = 3600
-max_concurrent_requests = 5
+```bash
+git add README.md
+git commit -m " Update README for v2.0 release"
+git push origin main
